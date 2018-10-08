@@ -6,30 +6,76 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>我的主页</title>
   <style>
-    ul.association{
+    input#search-bar {
+      height: 20px;
+      padding: 0.25em;
+      font-weight: bold;
+    }
+    input#to-search {
+      height: 30px;
+      color: white;
+      background-color: #2d78f4;
+    }
+
+    ul#association {
       border: 1px solid black;
+    }
+    ul#association li:hover {
+      background-color: #dbcbcb;
     }
   </style>
 </head>
 <body>
-<form action="http://www.baidu.com/baidu" target="_blank">
-    <input type=text name=word size=40><input type="submit" value="百度搜索">
-    <ul class="association">
-      <li>1</li>
-      <li>2</li>
-      <li>3</li>
-      <li>4</li>
-      <li>5</li>
+<form action="http://www.baidu.com/baidu" target="_self">
+    <input type=text name=word id="search-bar" size=40>
+    <input type="submit" id="to-search" value="百度搜索">
+    <ul id="association">
     </ul>
 </form>
 
 </body>
 
 <script>
+  let func_name = "func";
+  let ul_ele = document.querySelector("#association");
   function func(data) {
-    console.log(data.s);
+    let fragment = document.createDocumentFragment();
+    ul_ele.innerHTML = "";
+
+    for(let i=0; i<data.s.length; ++i) {
+      let li_ele = document.createElement("li");
+      li_ele.innerHTML = data.s[i];
+      fragment.appendChild(li_ele);
+    }
+    ul_ele.appendChild(fragment);
+
+    let ele = document.querySelector("#word-tree");
+    document.body.removeChild(ele);
   }
+
+  let search_bar = document.querySelector("#search-bar");
+  search_bar.addEventListener("keyup", function(event) {
+    // 拿到搜索词
+    let word = event.target.value;
+    console.log(word);
+
+    // 加载关联词
+    let script = document.createElement("script");
+    script.id = "word-tree";
+    script.src = `https://sp0.baidu.com/5a1Fazu8AA54nxGko9WTAnF6hhy/su?wd=${word}&cb=${func_name}`;
+    document.body.appendChild(script);
+  }, false);
+  search_bar.addEventListener("blur", function(event) {
+    ul_ele.innerHTML = "";
+  }, false);
+
+  ul_ele.addEventListener("click", function(event) {
+    if(event.target.nodeName.toLowerCase() === "li") {
+      search_bar.value = event.target.innerHTML;
+      document.querySelector("#to-search").click();
+    }
+  }, false);
+  
 </script>
-<script src="https://sp0.baidu.com/5a1Fazu8AA54nxGko9WTAnF6hhy/su?wd=hello&cb=func">
 </script>
 </html>
