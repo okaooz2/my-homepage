@@ -6,38 +6,69 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>我的主页</title>
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    div#bar {
+      display: flex;
+      position: relative;
+      top: 50px;
+      
+      flex-direction: row;
+      justify-content: center;
+    }
+    
     input#search-bar {
       height: 20px;
+      width: 400px;
       padding: 0.25em;
       font-weight: bold;
+      font-size: 1.1em;
     }
     input#to-search {
-      height: 30px;
+      height: 33px;
       color: white;
       background-color: #2d78f4;
     }
 
     ul#association {
-      border: 1px solid black;
+      border: 1px solid #e2d5d5;
+      padding: 0.5em;
+      position: absolute;
+      top: 17px;
+      width: 400px;
+
+      list-style: none;
     }
-    ul#association li:hover {
+    ul#association li {
+      margin-bottom: 0.1em;
+    }
+    ul#association > li:hover {
       background-color: #dbcbcb;
     }
   </style>
 </head>
 <body>
-<form action="http://www.baidu.com/baidu" target="_self">
-    <input type=text name=word id="search-bar" size=40>
+<div id="bar">
+  <form action="http://www.baidu.com/baidu" target="_self">
+    <input type=text name=word id="search-bar" autocomplete="off" size=40>
     <input type="submit" id="to-search" value="百度搜索">
-    <ul id="association">
+    <ul id="association" style="display: none;">
     </ul>
-</form>
+  </form>
+</div>
 
 </body>
 
 <script>
   let func_name = "func";
   let ul_ele = document.querySelector("#association");
+  let search_bar = document.querySelector("#search-bar");
+
   function func(data) {
     let fragment = document.createDocumentFragment();
     ul_ele.innerHTML = "";
@@ -48,27 +79,35 @@
       fragment.appendChild(li_ele);
     }
     ul_ele.appendChild(fragment);
+    ul_ele.style.display = "block";
 
     let ele = document.querySelector("#word-tree");
     document.body.removeChild(ele);
   }
 
-  let search_bar = document.querySelector("#search-bar");
+  // 每输入完一个字符就搜索关联词
   search_bar.addEventListener("keyup", function(event) {
     // 拿到搜索词
     let word = event.target.value;
-    console.log(word);
 
     // 加载关联词
     let script = document.createElement("script");
     script.id = "word-tree";
     script.src = `https://sp0.baidu.com/5a1Fazu8AA54nxGko9WTAnF6hhy/su?wd=${word}&cb=${func_name}`;
     document.body.appendChild(script);
+
   }, false);
+  // 搜索框失去焦点后关闭联想框
   search_bar.addEventListener("blur", function(event) {
     ul_ele.innerHTML = "";
+    ul_ele.style.display = "none";
   }, false);
 
+  // 消除blur事件与click事件之间的冲突
+  ul_ele.addEventListener("mousedown", function(event) {
+    event.preventDefault();
+  }, false);
+  // 点击联想框词条直接搜索
   ul_ele.addEventListener("click", function(event) {
     if(event.target.nodeName.toLowerCase() === "li") {
       search_bar.value = event.target.innerHTML;
