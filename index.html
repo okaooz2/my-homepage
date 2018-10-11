@@ -16,11 +16,17 @@
     div#bar {
       display: flex;
       position: relative;
-      top: 20px;
+      top: 200px;
+      transition: top 0.4s;
       
       flex-direction: row;
       justify-content: center;
     }
+    div#bar.to-top {
+      top: 5px;
+      transition: top 0.4s;
+    }
+
     form {
       display: inline-block;
     }
@@ -108,10 +114,15 @@
     document.body.appendChild(script);
 
   }, false);
-  // 搜索框失去焦点后关闭联想框
+  // 搜索框获得焦点
+  search_bar.addEventListener("focus", function(event) {
+    document.querySelector("#bar").classList.add("to-top");
+  }, false);
+  // 搜索框失去焦点
   search_bar.addEventListener("blur", function(event) {
     ul_ele.innerHTML = "";
     ul_ele.style.display = "none";
+    document.querySelector("#bar").classList.remove("to-top");
   }, false);
 
   // 消除blur事件与click事件之间的冲突
