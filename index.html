@@ -45,6 +45,7 @@
 
     ul#association {
       display: block;
+      position: relative;
       border: 1px solid #e2d5d5;
       padding: 0.5em;
       width: 250px;
@@ -57,6 +58,17 @@
     }
     ul#association > li:hover {
       background-color: #dbcbcb;
+    }
+    ul#association div.clear-history {
+      text-align: right;
+      color: blue;
+    }
+
+    span#enable-history {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      color: blue;
     }
   </style>
 </head>
@@ -71,72 +83,190 @@
   </form>
 </div>
 
+<span id="enable-history">搜索历史开启与关闭按钮</span>
+
 </body>
 
 <script>
-  let func_name = "func";
-  let ul_ele = document.querySelector("#association");
-  let search_bar = document.querySelector("#search-bar");
+let func_name = "func";
+let ul_ele = document.querySelector("#association");
+let search_bar = document.querySelector("#search-bar");
+let to_search = document.querySelector("#to-search");
 
-  function func(data) {
-    // 无联想结果时消去联想框
-    let ele = document.querySelector("#word-tree");
-    if(data.s.length === 0) {
-      ul_ele.innerHTML = "";
-      ul_ele.style.display = "none";
-      document.body.removeChild(ele);
-      return false;
-    }
-
-    let fragment = document.createDocumentFragment();
-    ul_ele.innerHTML = "";
-
-    for(let i=0; i<data.s.length; ++i) {
-      let li_ele = document.createElement("li");
-      li_ele.innerHTML = data.s[i];
-      fragment.appendChild(li_ele);
-    }
-    ul_ele.appendChild(fragment);
-    ul_ele.style.display = "block";
-
-    document.body.removeChild(ele);
-  }
-
-  // 每输入完一个字符就搜索关联词
-  search_bar.addEventListener("keyup", function(event) {
-    // 拿到搜索词
-    let word = event.target.value;
-
-    // 加载关联词
-    let script = document.createElement("script");
-    script.id = "word-tree";
-    script.src = `https://sp0.baidu.com/5a1Fazu8AA54nxGko9WTAnF6hhy/su?wd=${word}&cb=${func_name}`;
-    document.body.appendChild(script);
-
-  }, false);
-  // 搜索框获得焦点
-  search_bar.addEventListener("focus", function(event) {
-    document.querySelector("#bar").classList.add("to-top");
-  }, false);
-  // 搜索框失去焦点
-  search_bar.addEventListener("blur", function(event) {
+function func(data) {
+  // 无联想结果时消去联想框
+  let ele = document.querySelector("#word-tree");
+  if(data.s.length === 0) {
     ul_ele.innerHTML = "";
     ul_ele.style.display = "none";
-    document.querySelector("#bar").classList.remove("to-top");
-  }, false);
+    document.body.removeChild(ele);
+    return false;
+  }
 
-  // 消除blur事件与click事件之间的冲突
-  ul_ele.addEventListener("mousedown", function(event) {
-    event.preventDefault();
-  }, false);
-  // 点击联想框词条直接搜索
-  ul_ele.addEventListener("click", function(event) {
-    if(event.target.nodeName.toLowerCase() === "li") {
+  displayAssociation(data.s);
+
+  document.body.removeChild(ele);
+}
+
+// 每输入完一个字符就搜索关联词
+search_bar.addEventListener("keyup", function(event) {
+  ul_ele.innerHTML = "";
+  ul_ele.style.display = "none";
+  // 拿到搜索词
+  let word = event.target.value;
+  if(!word) {
+    showHistory();
+    return false;
+  }
+  loadWord(word);
+}, false);
+// 搜索框获得焦点
+search_bar.addEventListener("focus", function(event) {
+  document.querySelector("#bar").classList.add("to-top");
+  if(!!this.value) {
+    let word = search_bar.value;
+    loadWord(word);
+    return false;  
+  }
+
+  showHistory();
+}, false);
+// 搜索框失去焦点
+search_bar.addEventListener("blur", function(event) {
+  ul_ele.innerHTML = "";
+  ul_ele.style.display = "none";
+  document.querySelector("#bar").classList.remove("to-top");
+}, false);
+
+// 点击搜索时，添加词条到搜索记录
+to_search.addEventListener("click", function(event) {
+  // 设定为“记录搜索历史”时才记录词条
+  if(localStorage.getItem("enable-history") === "false") {
+    return false;
+  }
+
+  // 拿到历史搜索词条数组
+  // 数组低位索引为新词条，高位索引为旧词条
+  let words = localStorage.getItem('history-words');
+  if(!words) {
+    words = [];
+  }
+  else {
+    words = JSON.parse(words);
+  }
+  
+  // 查询数组中是否已有该词条，并做相应处理
+  search_word = search_bar.value.trim();
+  search_bar.value = search_word;
+  let index = words.findIndex((val) => val === search_word);
+  
+  if(index < 0) {
+    words.unshift(search_word);
+  }
+  else {
+    words.splice(index, 1);
+    words.unshift(search_word);
+  }
+  // 最多记录8个词条
+  if(words.length > 8) {
+    words.pop();
+  }
+  
+  localStorage.setItem('history-words',JSON.stringify(words));
+}, false);
+
+// 消除blur事件与click事件之间的冲突
+ul_ele.addEventListener("mousedown", function(event) {
+  event.preventDefault();
+}, false);
+// 点击联想框词条直接搜索
+ul_ele.addEventListener("click", function(event) {
+  switch (event.target.nodeName.toLowerCase()) {
+    case "li":
       search_bar.value = event.target.innerHTML;
       document.querySelector("#to-search").click();
-    }
-  }, false);
+      break;
+    case "span":
+      localStorage.setItem('history-words',"");
+      ul_ele.innerHTML = "";
+      ul_ele.style.display = "none";
+      break;
+    default:
+      break;
+  }
   
-</script>
+}, false);
+
+document.querySelector("#enable-history").addEventListener("click", function(event) { 
+  let flag = localStorage.getItem("enable-history");
+  flag === "true" ? flag = "false" : flag = "true";
+  localStorage.setItem("enable-history", flag);
+  checkFlag();
+}, false);
+
+
+// 用于联想框加载联想词条，输入参数为用于联想的词条
+function loadWord(word) {
+  // 加载关联词
+  let script = document.createElement("script");
+  script.id = "word-tree";
+  script.src = `https://sp0.baidu.com/5a1Fazu8AA54nxGko9WTAnF6hhy/su?wd=${word}&cb=${func_name}`;
+  document.body.appendChild(script);
+}
+
+// 展示联想词条，输入参数为要展示数据的数组
+function displayAssociation(datas) {
+  let fragment = document.createDocumentFragment();
+  ul_ele.innerHTML = "";
+
+  for(let i=0; i<datas.length; ++i) {
+    let li_ele = document.createElement("li");
+    li_ele.innerHTML = datas[i];
+    fragment.appendChild(li_ele);
+  }
+  ul_ele.appendChild(fragment);
+  ul_ele.style.display = "block";
+}
+
+// 展示历史搜索词条
+function showHistory() {
+  // 拿到历史搜索词条数组
+  // 数组低位索引为新词条，高位索引为旧词条
+  let words = localStorage.getItem('history-words');
+  if(!words) {
+    return false;
+  }
+  else {
+    words = JSON.parse(words);
+    displayAssociation(words);
+  }
+  
+  let buttom = document.createElement("div");
+  buttom.innerHTML = '<span>清除历史</span>';
+  buttom.classList.add("clear-history");
+  ul_ele.appendChild(buttom);
+}
+
+// 判断记录词条功能是否开启，在页面相应位置显示
+checkFlag();
+function checkFlag() {
+  let flag = localStorage.getItem("enable-history");
+  if(!flag) {
+    flag = "true";
+  }
+
+  switch (flag) {
+    case "true":
+      document.querySelector("#enable-history").innerHTML = "已开启记录搜索词";
+      break;
+    case "false":
+      document.querySelector("#enable-history").innerHTML = "已关闭记录搜索词";
+      break;
+    default:
+      document.querySelector("#enable-history").innerHTML = "error";
+      break;
+  }
+}
+
 </script>
 </html>
